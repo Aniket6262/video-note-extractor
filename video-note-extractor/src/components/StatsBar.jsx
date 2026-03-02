@@ -8,18 +8,30 @@ export default function StatsBar({ segments }) {
 
   return (
     <div style={{
-      display: 'flex', gap: 32, padding: '12px 24px',
-      background: '#f0f7ff', borderRadius: 8, margin: '0 24px 16px',
-      border: '1px solid #d0e8ff'
+      display: 'flex', gap: 2, margin: '0 32px 24px',
+      animation: 'fadeUp 0.4s ease',
     }}>
       {[
-        { label: 'Segments', value: segments.length },
-        { label: 'Duration', value: duration },
-        { label: 'Words ~', value: wordCount },
-      ].map(stat => (
-        <div key={stat.label}>
-          <div style={{ fontSize: 20, fontWeight: 700, color: '#0070f3' }}>{stat.value}</div>
-          <div style={{ fontSize: 11, color: '#888', textTransform: 'uppercase', letterSpacing: 1 }}>{stat.label}</div>
+        { label: 'SEGMENTS', value: segments.length },
+        { label: 'DURATION', value: duration },
+        { label: 'WORDS', value: wordCount.toLocaleString() },
+      ].map((stat, i) => (
+        <div key={stat.label} style={{
+          flex: 1, padding: '16px 20px',
+          background: 'var(--surface)',
+          border: '1px solid var(--border)',
+          borderRadius: i === 0 ? '12px 0 0 12px' : i === 2 ? '0 12px 12px 0' : 0,
+        }}>
+          <div style={{
+            fontSize: 24, fontWeight: 800,
+            fontFamily: "'Syne', sans-serif",
+            color: 'var(--accent)',
+          }}>{stat.value}</div>
+          <div style={{
+            fontSize: 10, color: 'var(--muted)',
+            fontFamily: "'JetBrains Mono', monospace",
+            letterSpacing: 2, marginTop: 2,
+          }}>{stat.label}</div>
         </div>
       ))}
     </div>

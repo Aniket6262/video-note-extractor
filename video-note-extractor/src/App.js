@@ -9,6 +9,7 @@ import QAPanel from './components/QAPanel';
 import { extractVideoId } from './utils/extractVideoId';
 import { fetchTranscript } from './utils/fetchTranscript';
 import { generateNotes, generateTimestamps, generateActions } from './services/openai';
+import './App.css';
 
 export default function App() {
   const [url, setUrl] = useState('');
@@ -40,14 +41,12 @@ export default function App() {
       const fullText = fetchedSegments.map(s => `[${s.start}s] ${s.text}`).join('\n');
       transcriptRef.current = fullText;
 
-      // Send transcript to Python server to build FAISS RAG index
       await axios.post('http://localhost:5000/process', {
         videoId: vid,
         transcript: fetchedSegments,
         apiKey: process.env.REACT_APP_OPENAI_API_KEY,
       });
 
-      // Run all 3 AI calls in parallel
       await Promise.all([
         generateNotes(fullText, text => setResults(r => ({ ...r, notes: text }))),
         generateTimestamps(fetchedSegments, text => setResults(r => ({ ...r, timestamps: text }))),
@@ -61,40 +60,64 @@ export default function App() {
   }
 
   return (
-    <div style={{ maxWidth: 860, margin: '0 auto', fontFamily: 'sans-serif', paddingBottom: 60 }}>
+    <div style={{ maxWidth: 900, margin: '0 auto', paddingBottom: 80 }}>
 
       {/* Header */}
-      <div style={{ padding: '32px 24px 8px' }}>
-        <h1 style={{ margin: 0, fontSize: 28 }}>🎬 Video Note Extractor</h1>
-        <p style={{ color: '#888', marginTop: 6 }}>
-          Paste a YouTube URL to get organized notes, timestamps, and action items instantly.
+      <div style={{ padding: '48px 32px 32px', animation: 'fadeUp 0.5s ease' }}>
+        <div style={{
+          fontSize: 11, fontFamily: "'JetBrains Mono', monospace",
+          color: 'var(--accent)', letterSpacing: 3,
+          textTransform: 'uppercase', marginBottom: 12,
+        }}>
+          ◈ AI-POWERED LEARNING TOOL
+        </div>
+        <h1 style={{
+          fontSize: 48, fontWeight: 800,
+          fontFamily: "'Syne', sans-serif",
+          lineHeight: 1.1, letterSpacing: -1,
+          color: 'var(--text)', marginBottom: 12,
+        }}>
+          Video Note<br />
+          <span style={{ color: 'var(--accent)' }}>Extractor</span>
+        </h1>
+        <p style={{ color: 'var(--muted)', fontSize: 15, maxWidth: 460 }}>
+          Paste any YouTube URL — get organized notes, key timestamps, action items, and AI-powered Q&A instantly.
         </p>
       </div>
 
       {/* URL Input */}
-      <InputBar
-        url={url}
-        setUrl={setUrl}
-        onExtract={handleExtract}
-        loading={loading}
-      />
+      <InputBar url={url} setUrl={setUrl} onExtract={handleExtract} loading={loading} />
 
       {/* Error Message */}
       {error && (
-        <p style={{ color: 'red', padding: '0 24px', fontSize: 14 }}>⚠ {error}</p>
+        <p style={{
+          color: 'var(--error)', padding: '0 32px 16px',
+          fontSize: 13, fontFamily: "'JetBrains Mono', monospace",
+        }}>
+          ⚠ {error}
+        </p>
       )}
 
       {/* Loading Status */}
       {loading && (
-        <p style={{ color: '#0070f3', padding: '0 24px', fontSize: 14 }}>
-          ⏳ Fetching transcript and generating notes...
-        </p>
+        <div style={{
+          display: 'flex', alignItems: 'center', gap: 10,
+          padding: '0 32px 20px',
+          color: 'var(--accent)', fontSize: 12,
+          fontFamily: "'JetBrains Mono', monospace",
+        }}>
+          <div style={{
+            width: 14, height: 14, borderRadius: '50%',
+            border: '2px solid rgba(232,255,71,0.2)',
+            borderTopColor: 'var(--accent)',
+            animation: 'spin 0.8s linear infinite',
+          }} />
+          FETCHING TRANSCRIPT AND GENERATING NOTES...
+        </div>
       )}
 
       {/* Video Player */}
-      <div style={{ padding: '0 24px', marginTop: 16 }}>
-        <VideoPlayer videoId={videoId} />
-      </div>
+      <VideoPlayer videoId={videoId} />
 
       {/* Stats Bar */}
       <StatsBar segments={segments} />
@@ -105,15 +128,9 @@ export default function App() {
           <TabSwitcher activeTab={activeTab} setActiveTab={setActiveTab} />
 
           <div style={{ marginTop: 16 }}>
-            {activeTab === 'notes' && (
-              <ResultsPanel content={results.notes} />
-            )}
-            {activeTab === 'timestamps' && (
-              <ResultsPanel content={results.timestamps} />
-            )}
-            {activeTab === 'actions' && (
-              <ResultsPanel content={results.actions} />
-            )}
+            {activeTab === 'notes' && <ResultsPanel content={results.notes} />}
+            {activeTab === 'timestamps' && <ResultsPanel content={results.timestamps} />}
+            {activeTab === 'actions' && <ResultsPanel content={results.actions} />}
             {activeTab === 'qa' && (
               <QAPanel
                 videoId={videoId}
