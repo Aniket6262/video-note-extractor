@@ -1,4 +1,5 @@
 import { useState, useRef } from 'react';
+import axios from 'axios';
 import InputBar from './components/InputBar';
 import VideoPlayer from './components/VideoPlayer';
 import StatsBar from './components/StatsBar';
@@ -7,7 +8,7 @@ import ResultsPanel from './components/ResultsPanel';
 import QAPanel from './components/QAPanel';
 import { extractVideoId } from './utils/extractVideoId';
 import { fetchTranscript } from './utils/fetchTranscript';
-import { generateNotes, generateTimestamps, generateActions, askQuestion } from './services/openai';
+import { generateNotes, generateTimestamps, generateActions } from './services/openai';
 
 export default function App() {
   const [url, setUrl] = useState('');
@@ -39,6 +40,14 @@ export default function App() {
       const fullText = fetchedSegments.map(s => `[${s.start}s] ${s.text}`).join('\n');
       transcriptRef.current = fullText;
 
+      // Send transcript to Python server to build FAISS RAG index
+      await axios.post('http://localhost:5000/process', {
+        videoId: vid,
+        transcript: fetchedSegments,
+        apiKey: process.env.REACT_APP_OPENAI_API_KEY,
+      });
+
+      // Run all 3 AI calls in parallel
       await Promise.all([
         generateNotes(fullText, text => setResults(r => ({ ...r, notes: text }))),
         generateTimestamps(fetchedSegments, text => setResults(r => ({ ...r, timestamps: text }))),
@@ -51,16 +60,9 @@ export default function App() {
     setLoading(false);
   }
 
-  async function handleAsk(question) {
-    setResults(r => ({ ...r, qa: '' }));
-    await askQuestion(transcriptRef.current, question, text =>
-      setResults(r => ({ ...r, qa: text }))
-    );
-  }
-
   return (
     <div style={{ maxWidth: 860, margin: '0 auto', fontFamily: 'sans-serif', paddingBottom: 60 }}>
-      
+
       {/* Header */}
       <div style={{ padding: '32px 24px 8px' }}>
         <h1 style={{ margin: 0, fontSize: 28 }}>🎬 Video Note Extractor</h1>
@@ -94,10 +96,10 @@ export default function App() {
         <VideoPlayer videoId={videoId} />
       </div>
 
-      {/* Stats Bar — only shows after transcript is fetched */}
+      {/* Stats Bar */}
       <StatsBar segments={segments} />
 
-      {/* Tabs + Results — only shows when there's something to show */}
+      {/* Tabs + Results */}
       {(results.notes || results.timestamps || results.actions || loading) && (
         <>
           <TabSwitcher activeTab={activeTab} setActiveTab={setActiveTab} />
@@ -113,7 +115,12 @@ export default function App() {
               <ResultsPanel content={results.actions} />
             )}
             {activeTab === 'qa' && (
-              <QAPanel onAsk={handleAsk} answer={results.qa} />
+              <QAPanel
+                videoId={videoId}
+                apiKey={process.env.REACT_APP_OPENAI_API_KEY}
+                answer={results.qa}
+                setAnswer={text => setResults(r => ({ ...r, qa: text }))}
+              />
             )}
           </div>
         </>
